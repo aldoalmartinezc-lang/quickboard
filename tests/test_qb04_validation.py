@@ -154,3 +154,133 @@ async def test_delete_returns_204(tmp_path):
         board = await _create_board(client)
         resp = await client.delete(f"/boards/{board['id']}")
         assert resp.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# QB-04: Consistent error format and additional validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_422_validation_error_structure(tmp_path):
+    """422 responses include structured 'errors' array with field/message/type."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post("/boards", json={"name": ""})
+        assert resp.status_code == 422
+        body = resp.json()
+        assert "detail" in body
+        assert "errors" in body
+        assert len(body["errors"]) > 0
+        for err in body["errors"]:
+            assert "field" in err
+            assert "message" in err
+            assert "type" in err
+
+
+@pytest.mark.asyncio
+async def test_422_whitespace_only_name_rejected(tmp_path):
+    """Whitespace-only names are rejected after strip (not stored as empty)."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post("/boards", json={"name": "   "})
+        assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_board_validation(tmp_path):
+    """PATCH /boards/{id} rejects empty and too-long names."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        assert (await client.patch(f"/boards/{board['id']}", json={"name": ""})).status_code == 422
+        assert (await client.patch(f"/boards/{board['id']}", json={"name": "y" * 121})).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_list_validation(tmp_path):
+    """PATCH /lists/{id} rejects empty name."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        lst = await _create_list(client, board["id"])
+        assert (await client.patch(f"/lists/{lst['id']}", json={"name": ""})).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_card_validation(tmp_path):
+    """PATCH /cards/{id} rejects empty title."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        lst = await _create_list(client, board["id"])
+        card = await _create_card(client, lst["id"])
+        assert (await client.patch(f"/cards/{card['id']}", json={"title": ""})).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_card_not_found(tmp_path):
+    """PATCH /cards/9999 returns 404."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.patch("/cards/9999", json={"title": "X"})
+        assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_move_card_validation(tmp_path):
+    """POST /cards/{id}/move rejects list_id<=0 and negative position."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        lst = await _create_list(client, board["id"])
+        card = await _create_card(client, lst["id"])
+        assert (await client.post(f"/cards/{card['id']}/move", json={"list_id": 0, "position": 0})).status_code == 422
+        assert (await client.post(f"/cards/{card['id']}/move", json={"list_id": lst["id"], "position": -1})).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_put_tags_validation(tmp_path):
+    """PUT /cards/{id}/tags rejects empty tags and too many tags."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        lst = await _create_list(client, board["id"])
+        card = await _create_card(client, lst["id"])
+        assert (await client.put(f"/cards/{card['id']}/tags", json={"tags": [""]})).status_code == 422
+        assert (await client.put(f"/cards/{card['id']}/tags", json={"tags": [f"t{i}" for i in range(21)]})).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_search_empty_query_returns_422(tmp_path):
+    """GET /cards/search with empty q returns 422."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        assert (await client.get("/cards/search?q=")).status_code == 422
+        assert (await client.get("/cards/search")).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_board_detail_includes_nested_lists_with_cards(tmp_path):
+    """GET /boards/{id} returns lists with nested cards."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        await _create_list(client, board["id"], "Todo")
+        detail = (await client.get(f"/boards/{board['id']}")).json()
+        assert "lists" in detail
+        assert len(detail["lists"]) == 1
+        assert "cards" in detail["lists"][0]
+
+
+@pytest.mark.asyncio
+async def test_list_detail_includes_cards(tmp_path):
+    """GET /lists/{id} returns cards."""
+    app = _app(tmp_path)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        board = await _create_board(client)
+        lst = await _create_list(client, board["id"])
+        await _create_card(client, lst["id"], title="Task 1")
+        detail = (await client.get(f"/lists/{lst['id']}")).json()
+        assert "cards" in detail
+        assert len(detail["cards"]) == 1
