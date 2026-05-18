@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: quickboard
+Version: 0.1.0
+Summary: Tu kanban personal via API REST. Sin cuentas, sin fricción.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1.0,>=0.115
+Requires-Dist: sqlmodel<1.0,>=0.0.22
+Requires-Dist: uvicorn[standard]<1.0,>=0.30
+Provides-Extra: dev
+Requires-Dist: httpx<1.0,>=0.27; extra == "dev"
+Requires-Dist: pytest<9.0,>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio<1.0,>=0.23; extra == "dev"
+Requires-Dist: ruff<1.0,>=0.6; extra == "dev"
+
+# QuickBoard
+
+Tu kanban personal vía API REST. Sin cuentas, sin fricción.
+
+## Estado
+MVP en construcción.
