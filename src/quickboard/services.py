@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlmodel import Session, select
 
 from . import crud
 from .models import Board, Card, CardTag, List
+
 
 class NotFoundError(KeyError):
     pass
@@ -197,7 +198,7 @@ def move_card(session: Session, card_id: int, list_id: int, position: int | None
 def complete_card(session: Session, card_id: int) -> dict:
     card = _get_or_raise(crud.card_by_id, session, card_id)
     if card.completed_at is None:
-        card.completed_at = datetime.now(timezone.utc)
+        card.completed_at = datetime.now(UTC)
         card.updated_at = crud.utcnow()
         session.add(card)
         session.commit()

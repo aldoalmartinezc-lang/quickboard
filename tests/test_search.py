@@ -13,11 +13,8 @@ async def test_search_finds_cards_by_title_or_description(tmp_path):
         await client.post(f"/lists/{todo['id']}/cards", json={"title": "Write docs", "description": "finish README"})
         await client.post(f"/lists/{todo['id']}/cards", json={"title": "Refactor", "description": "keep searchable"})
 
-        response = await client.get("/cards/search", params={"q": "README"})
-        cards = response.json()
-        assert len(cards) == 1
-        assert cards[0]["title"] == "Write docs"
+        docs = (await client.get("/cards/search", params={"q": "README"})).json()
+        assert [card["title"] for card in docs] == ["Write docs"]
 
-        response = await client.get("/cards/search", params={"q": "search"})
-        cards = response.json()
-        assert {card["title"] for card in cards} == {"Refactor"}
+        search = (await client.get("/cards/search", params={"q": "search"})).json()
+        assert [card["title"] for card in search] == ["Refactor"]

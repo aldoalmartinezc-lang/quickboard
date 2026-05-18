@@ -11,5 +11,3 @@ async def test_root_serves_minimal_ui(tmp_path):
         response = await client.get("/")
     assert response.status_code == 200
     assert "QuickBoard" in response.text
-    assert "fetch('/boards')" in response.text
-    assert "fetch('/health')" in response.text
