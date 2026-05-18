@@ -1,9 +1,0 @@
-fastapi<1.0,>=0.115
-sqlmodel<1.0,>=0.0.22
-uvicorn[standard]<1.0,>=0.30
-
-[dev]
-httpx<1.0,>=0.27
-pytest<9.0,>=8.0
-pytest-asyncio<1.0,>=0.23
-ruff<1.0,>=0.6
