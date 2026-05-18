@@ -15,10 +15,23 @@ class ListCreate(SQLModel):
     name: str
 
 
+class ListUpdate(SQLModel):
+    name: str
+
+
+class ListMove(SQLModel):
+    position: int
+
+
 class CardCreate(SQLModel):
     title: str
     description: str = ""
     tags: list[str] = Field(default_factory=list)
+
+
+class CardUpdate(SQLModel):
+    title: str | None = None
+    description: str | None = None
 
 
 class CardMove(SQLModel):

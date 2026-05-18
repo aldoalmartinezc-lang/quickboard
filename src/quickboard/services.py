@@ -7,8 +7,11 @@ from sqlmodel import Session, select
 from . import crud
 from .models import Board, Card, CardTag, List
 
-
 class NotFoundError(KeyError):
+    pass
+
+
+class BelongingError(ValueError):
     pass
 
 
@@ -26,6 +29,10 @@ def _resequence_cards(session: Session, list_id: int, cards: list[Card]) -> None
         item.updated_at = crud.utcnow()
         session.add(item)
 
+
+# ---------------------------------------------------------------------------
+# Boards
+# ---------------------------------------------------------------------------
 
 def list_boards(session: Session) -> list[dict]:
     return [crud.board_to_dict(session, board) for board in crud.ordered_boards(session)]
@@ -68,6 +75,10 @@ def delete_board(session: Session, board_id: int) -> None:
     session.commit()
 
 
+# ---------------------------------------------------------------------------
+# Lists
+# ---------------------------------------------------------------------------
+
 def list_lists(session: Session, board_id: int) -> list[dict]:
     _get_or_raise(crud.board_by_id, session, board_id)
     return [crud.list_to_dict(session, list_obj) for list_obj in crud.ordered_lists(session, board_id)]
@@ -84,6 +95,59 @@ def create_list(session: Session, board_id: int, name: str) -> dict:
     session.commit()
     return crud.list_to_dict(session, list_obj)
 
+
+def get_list(session: Session, list_id: int) -> dict:
+    list_obj = _get_or_raise(crud.list_by_id, session, list_id)
+    return crud.list_to_dict(session, list_obj, include_cards=True)
+
+
+def rename_list(session: Session, list_id: int, name: str) -> dict:
+    list_obj = _get_or_raise(crud.list_by_id, session, list_id)
+    list_obj.name = name.strip()
+    list_obj.updated_at = crud.utcnow()
+    session.add(list_obj)
+    session.commit()
+    session.refresh(list_obj)
+    return crud.list_to_dict(session, list_obj)
+
+
+def delete_list(session: Session, list_id: int) -> None:
+    list_obj = _get_or_raise(crud.list_by_id, session, list_id)
+    board_id = list_obj.board_id
+    # Delete all cards and their tag associations within this list
+    for card in crud.ordered_cards(session, list_obj.id):
+        for relation in list(session.exec(select(CardTag).where(CardTag.card_id == card.id)).all()):
+            session.delete(relation)
+        session.delete(card)
+    session.delete(list_obj)
+    session.commit()
+    # Reindex remaining lists in the board
+    crud.reindex_lists(session, board_id)
+    session.commit()
+
+
+def move_list(session: Session, list_id: int, position: int) -> dict:
+    list_obj = _get_or_raise(crud.list_by_id, session, list_id)
+    board_id = list_obj.board_id
+    siblings = list(crud.ordered_lists(session, board_id))
+    # Remove the list from its current position
+    siblings = [s for s in siblings if s.id != list_id]
+    # Clamp position to valid range
+    insert_at = max(0, min(position, len(siblings)))
+    siblings.insert(insert_at, list_obj)
+    # Resequence
+    for index, item in enumerate(siblings):
+        item.position = index
+        item.updated_at = crud.utcnow()
+        session.add(item)
+    session.commit()
+    session.refresh(list_obj)
+    return crud.list_to_dict(session, list_obj)
+
+
+# ---------------------------------------------------------------------------
+# Cards
+# ---------------------------------------------------------------------------
 
 def list_cards(session: Session, list_id: int) -> list[dict]:
     _get_or_raise(crud.list_by_id, session, list_id)
@@ -138,6 +202,30 @@ def complete_card(session: Session, card_id: int) -> dict:
         session.add(card)
         session.commit()
         session.refresh(card)
+    return crud.card_to_dict(session, card)
+
+
+def uncomplete_card(session: Session, card_id: int) -> dict:
+    card = _get_or_raise(crud.card_by_id, session, card_id)
+    if card.completed_at is not None:
+        card.completed_at = None
+        card.updated_at = crud.utcnow()
+        session.add(card)
+        session.commit()
+        session.refresh(card)
+    return crud.card_to_dict(session, card)
+
+
+def update_card(session: Session, card_id: int, title: str | None = None, description: str | None = None) -> dict:
+    card = _get_or_raise(crud.card_by_id, session, card_id)
+    if title is not None:
+        card.title = title.strip()
+    if description is not None:
+        card.description = description
+    card.updated_at = crud.utcnow()
+    session.add(card)
+    session.commit()
+    session.refresh(card)
     return crud.card_to_dict(session, card)
 
 

@@ -40,6 +40,16 @@ def get_session() -> Iterator[Session]:
         yield session
 
 
+def configure_engine(url: str):
+    """Replace the global engine with one pointing at *url*.
+
+    Used by ``create_app(database_url=...)`` so integration tests can
+    spin up a file-based SQLite without touching the production database.
+    """
+    global engine
+    engine = create_engine(url, connect_args={"check_same_thread": False}, echo=False)
+
+
 def create_test_engine():
     """Return a fresh in-memory SQLite engine for use in test fixtures."""
     return create_engine(
