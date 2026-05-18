@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 
 from .db import get_session
+from .settings import Settings
 from .schemas import (
     BoardCreate,
     BoardDetail,
@@ -44,6 +45,15 @@ from .services import (
 
 router = APIRouter()
 
+_settings: Settings | None = None
+
+
+def _get_settings() -> Settings:
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
+
 
 # ---------------------------------------------------------------------------
 # Consistent error helpers
@@ -61,10 +71,7 @@ def _not_found(error: KeyError | NotFoundError) -> HTTPException:
 
 @router.get("/health", response_model=dict)
 def health() -> dict[str, str]:
-    from .settings import Settings
-
-    settings = Settings()
-    return {"status": "ok", "version": settings.version}
+    return {"status": "ok", "version": _get_settings().version}
 
 
 # ---------------------------------------------------------------------------
