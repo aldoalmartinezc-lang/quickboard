@@ -63,7 +63,7 @@ async def test_card_reordering_within_and_across_lists(tmp_path):
         target = (await client.post(f"/boards/{board['id']}/lists", json={"name": "Target"})).json()
         a = (await client.post(f"/lists/{source['id']}/cards", json={"title": "A"})).json()
         b = (await client.post(f"/lists/{source['id']}/cards", json={"title": "B"})).json()
-        x = (await client.post(f"/lists/{target['id']}/cards", json={"title": "X"})).json()
+        await client.post(f"/lists/{target['id']}/cards", json={"title": "X"})
 
         await client.post(f"/cards/{a['id']}/move", json={"list_id": source['id'], "position": 1})
         source_cards = (await client.get(f"/lists/{source['id']}/cards")).json()

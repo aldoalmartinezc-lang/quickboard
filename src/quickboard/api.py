@@ -2,9 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 
 from .db import get_session
-from .schemas import BoardCreate, BoardUpdate, CardCreate, CardMove, CardTagsUpdate, CardUpdate, ListCreate, ListMove, ListUpdate
+from .schemas import (
+    BoardCreate,
+    BoardDetail,
+    BoardRead,
+    BoardUpdate,
+    CardCreate,
+    CardMove,
+    CardRead,
+    CardTagsUpdate,
+    CardUpdate,
+    ListCreate,
+    ListDetail,
+    ListMove,
+    ListRead,
+    ListUpdate,
+)
 from .services import (
-    BelongingError,
     NotFoundError,
     complete_card,
     create_board,
@@ -31,19 +45,21 @@ from .services import (
 router = APIRouter()
 
 
+# ---------------------------------------------------------------------------
+# Consistent error helpers
+# ---------------------------------------------------------------------------
+
+
 def _not_found(error: KeyError | NotFoundError) -> HTTPException:
     return HTTPException(status_code=404, detail=str(error))
-
-
-def _belonging_error(error: BelongingError) -> HTTPException:
-    return HTTPException(status_code=400, detail=str(error))
 
 
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
 
-@router.get("/health")
+
+@router.get("/health", response_model=dict)
 def health() -> dict[str, str]:
     from .settings import Settings
 
@@ -55,17 +71,18 @@ def health() -> dict[str, str]:
 # Board CRUD
 # ---------------------------------------------------------------------------
 
-@router.get("/boards")
+
+@router.get("/boards", response_model=list[BoardRead])
 def get_boards(session: Session = Depends(get_session)):
     return list_boards(session)
 
 
-@router.post("/boards", status_code=201)
+@router.post("/boards", status_code=201, response_model=BoardRead)
 def post_board(payload: BoardCreate, session: Session = Depends(get_session)):
     return create_board(session, payload.name)
 
 
-@router.get("/boards/{board_id}")
+@router.get("/boards/{board_id}", response_model=BoardDetail)
 def get_board_detail(board_id: int, session: Session = Depends(get_session)):
     try:
         return get_board(session, board_id)
@@ -73,7 +90,7 @@ def get_board_detail(board_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.patch("/boards/{board_id}")
+@router.patch("/boards/{board_id}", response_model=BoardRead)
 def patch_board(board_id: int, payload: BoardUpdate, session: Session = Depends(get_session)):
     try:
         return rename_board(session, board_id, payload.name)
@@ -93,7 +110,8 @@ def remove_board(board_id: int, session: Session = Depends(get_session)):
 # List nested under Board (create + list)
 # ---------------------------------------------------------------------------
 
-@router.get("/boards/{board_id}/lists")
+
+@router.get("/boards/{board_id}/lists", response_model=list[ListRead])
 def get_board_lists(board_id: int, session: Session = Depends(get_session)):
     try:
         return list_lists(session, board_id)
@@ -101,7 +119,7 @@ def get_board_lists(board_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.post("/boards/{board_id}/lists", status_code=201)
+@router.post("/boards/{board_id}/lists", status_code=201, response_model=ListRead)
 def post_board_list(board_id: int, payload: ListCreate, session: Session = Depends(get_session)):
     try:
         return create_list(session, board_id, payload.name)
@@ -113,7 +131,8 @@ def post_board_list(board_id: int, payload: ListCreate, session: Session = Depen
 # List CRUD (direct access by list_id)
 # ---------------------------------------------------------------------------
 
-@router.get("/lists/{list_id}")
+
+@router.get("/lists/{list_id}", response_model=ListDetail)
 def get_list_detail(list_id: int, session: Session = Depends(get_session)):
     try:
         return get_list(session, list_id)
@@ -121,7 +140,7 @@ def get_list_detail(list_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.patch("/lists/{list_id}")
+@router.patch("/lists/{list_id}", response_model=ListRead)
 def patch_list(list_id: int, payload: ListUpdate, session: Session = Depends(get_session)):
     try:
         return rename_list(session, list_id, payload.name)
@@ -137,7 +156,7 @@ def remove_list(list_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.post("/lists/{list_id}/move")
+@router.post("/lists/{list_id}/move", response_model=ListRead)
 def post_move_list(list_id: int, payload: ListMove, session: Session = Depends(get_session)):
     try:
         return move_list(session, list_id, payload.position)
@@ -149,7 +168,8 @@ def post_move_list(list_id: int, payload: ListMove, session: Session = Depends(g
 # Card CRUD
 # ---------------------------------------------------------------------------
 
-@router.get("/lists/{list_id}/cards")
+
+@router.get("/lists/{list_id}/cards", response_model=list[CardRead])
 def get_list_cards(list_id: int, session: Session = Depends(get_session)):
     try:
         return list_cards(session, list_id)
@@ -157,7 +177,7 @@ def get_list_cards(list_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.post("/lists/{list_id}/cards", status_code=201)
+@router.post("/lists/{list_id}/cards", status_code=201, response_model=CardRead)
 def post_list_card(list_id: int, payload: CardCreate, session: Session = Depends(get_session)):
     try:
         return create_card(session, list_id, payload.title, payload.description, payload.tags)
@@ -165,7 +185,7 @@ def post_list_card(list_id: int, payload: CardCreate, session: Session = Depends
         raise _not_found(error) from error
 
 
-@router.post("/cards/{card_id}/move")
+@router.post("/cards/{card_id}/move", response_model=CardRead)
 def post_move_card(card_id: int, payload: CardMove, session: Session = Depends(get_session)):
     try:
         return move_card(session, card_id, payload.list_id, payload.position)
@@ -173,7 +193,7 @@ def post_move_card(card_id: int, payload: CardMove, session: Session = Depends(g
         raise _not_found(error) from error
 
 
-@router.post("/cards/{card_id}/complete")
+@router.post("/cards/{card_id}/complete", response_model=CardRead)
 def post_complete_card(card_id: int, session: Session = Depends(get_session)):
     try:
         return complete_card(session, card_id)
@@ -181,7 +201,7 @@ def post_complete_card(card_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.post("/cards/{card_id}/uncomplete")
+@router.post("/cards/{card_id}/uncomplete", response_model=CardRead)
 def post_uncomplete_card(card_id: int, session: Session = Depends(get_session)):
     try:
         return uncomplete_card(session, card_id)
@@ -189,7 +209,7 @@ def post_uncomplete_card(card_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.patch("/cards/{card_id}")
+@router.patch("/cards/{card_id}", response_model=CardRead)
 def patch_card(card_id: int, payload: CardUpdate, session: Session = Depends(get_session)):
     try:
         return update_card(session, card_id, payload.title, payload.description)
@@ -205,7 +225,7 @@ def remove_card(card_id: int, session: Session = Depends(get_session)):
         raise _not_found(error) from error
 
 
-@router.put("/cards/{card_id}/tags")
+@router.put("/cards/{card_id}/tags", response_model=CardRead)
 def put_card_tags(card_id: int, payload: CardTagsUpdate, session: Session = Depends(get_session)):
     try:
         return replace_tags(session, card_id, payload.tags)
@@ -213,6 +233,6 @@ def put_card_tags(card_id: int, payload: CardTagsUpdate, session: Session = Depe
         raise _not_found(error) from error
 
 
-@router.get("/cards/search")
+@router.get("/cards/search", response_model=list[CardRead])
 def find_cards(q: str = Query(min_length=1), session: Session = Depends(get_session)):
     return search_cards(session, q)

@@ -1,0 +1,14 @@
+services:
+  quickboard:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - QUICKBOARD_DATABASE_URL=sqlite:////data/quickboard.db
+      - QUICKBOARD_APP_NAME=QuickBoard
+      - QUICKBOARD_VERSION=0.1.0
+    volumes:
+      - quickboard-data:/data
+
+volumes:
+  quickboard-data:

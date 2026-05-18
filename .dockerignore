@@ -1,0 +1,15 @@
+.git
+__pycache__
+.pytest_cache
+.ruff_cache
+.venv
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+coverage.xml
+htmlcov
+build
+*.egg-info

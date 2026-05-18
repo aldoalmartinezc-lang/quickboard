@@ -100,7 +100,7 @@ async def test_card_delete_reindexes_positions(tmp_path):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         board = await _board(client)
         lst = await _list(client, board["id"])
-        _c0 = await _card(client, lst["id"], title="A")
+        await _card(client, lst["id"], title="A")
         c1 = await _card(client, lst["id"], title="B")
         await _card(client, lst["id"], title="C")
         # Delete middle card

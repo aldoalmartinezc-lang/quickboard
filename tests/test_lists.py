@@ -5,7 +5,6 @@ from httpx import ASGITransport, AsyncClient
 
 from quickboard.main import create_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
