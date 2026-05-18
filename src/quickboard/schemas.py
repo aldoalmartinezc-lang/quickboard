@@ -1,62 +1,67 @@
 from datetime import datetime
-from typing import Optional
 
-from sqlmodel import SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class BoardCreate(SQLModel):
     name: str
 
 
-class BoardRead(BoardCreate):
-    id: int
-    position: int
-    created_at: datetime
-
-
 class BoardUpdate(SQLModel):
-    name: Optional[str] = None
+    name: str
 
 
 class ListCreate(SQLModel):
     name: str
 
 
-class ListRead(ListCreate):
-    id: int
-    board_id: int
-    position: int
-    created_at: datetime
-
-
-class ListUpdate(SQLModel):
-    name: Optional[str] = None
-
-
 class CardCreate(SQLModel):
     title: str
     description: str = ""
-    tags: list[str] = []
-
-
-class CardRead(CardCreate):
-    id: int
-    list_id: int
-    position: int
-    completed_at: Optional[datetime] = None
-    created_at: datetime
-
-
-class CardUpdate(SQLModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+    tags: list[str] = Field(default_factory=list)
 
 
 class CardMove(SQLModel):
     list_id: int
-    position: Optional[int] = None
+    position: int | None = None
 
 
-class TagRead(SQLModel):
+class CardTagsUpdate(SQLModel):
+    tags: list[str] = Field(default_factory=list)
+
+
+class BoardRead(SQLModel):
     id: int
     name: str
+    position: int
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class ListRead(SQLModel):
+    id: int
+    board_id: int
+    name: str
+    position: int
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class CardRead(SQLModel):
+    id: int
+    list_id: int
+    title: str
+    description: str
+    position: int
+    completed_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class ListDetail(ListRead):
+    cards: list[CardRead] = Field(default_factory=list)
+
+
+class BoardDetail(BoardRead):
+    lists: list[ListDetail] = Field(default_factory=list)
