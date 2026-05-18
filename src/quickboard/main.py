@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from .api import router as api_router
 from .db import init_db
-from .schemas import ErrorResponse
 from .settings import Settings
 from .web import router as web_router
 

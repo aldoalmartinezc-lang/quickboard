@@ -24,7 +24,10 @@ class BoardCreate(SQLModel):
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
-        return v.strip()
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Name cannot be blank")
+        return stripped
 
 
 class BoardUpdate(SQLModel):
@@ -33,7 +36,10 @@ class BoardUpdate(SQLModel):
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
-        return v.strip()
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Name cannot be blank")
+        return stripped
 
 
 class ListCreate(SQLModel):
@@ -42,7 +48,10 @@ class ListCreate(SQLModel):
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
-        return v.strip()
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Name cannot be blank")
+        return stripped
 
 
 class ListUpdate(SQLModel):
@@ -51,7 +60,10 @@ class ListUpdate(SQLModel):
     @field_validator("name")
     @classmethod
     def _strip_name(cls, v: str) -> str:
-        return v.strip()
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("Name cannot be blank")
+        return stripped
 
 
 class ListMove(SQLModel):
@@ -86,7 +98,12 @@ class CardUpdate(SQLModel):
     @field_validator("title")
     @classmethod
     def _strip_title(cls, v: str | None) -> str | None:
-        return v.strip() if v is not None else None
+        if v is not None:
+            stripped = v.strip()
+            if not stripped:
+                raise ValueError("Title cannot be blank")
+            return stripped
+        return None
 
 
 class CardMove(SQLModel):
